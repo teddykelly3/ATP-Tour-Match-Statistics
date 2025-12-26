@@ -1,10 +1,11 @@
 library(shiny)
 library(dplyr)
-library(tidyr)
-library(ggplot2)
-library(scales)   # for percent formatting
-library(glue)
+library(stargazer)
 
+
+library(tidyverse)
+library(stargazer)
+library(DataExplorer)
 
 # Import full tennis dataset
 tennis_temp <- 
@@ -35,6 +36,7 @@ df <- df |> filter(surface != "Carpet")
 
 
 
+
 # --------------- Creating new Variables -----------------
 
 
@@ -60,7 +62,6 @@ df$l_bpSavedPct[is.na(df$l_bpSavedPct)] <- 1
 df$w_bpConv <- df$l_bpFaced - df$l_bpSaved
 df$l_bpConv <- df$w_bpFaced - df$w_bpSaved
 
-
 # Break Point conversion rate winners and losers
 df$w_bpConvPct <- (1 - df$l_bpSavedPct)
 df$l_bpConvPct <- (1 - df$w_bpSavedPct)
@@ -73,6 +74,8 @@ df$l_returnPtsWon <- (df$w_svpt - (df$w_1stWon + df$w_2ndWon))
 df$w_returnPtsWonPct <- df$w_returnPtsWon / df$l_svpt
 df$l_returnPtsWonPct <- df$l_returnPtsWon / df$w_svpt
 
+# Check for any missing values
+plot_missing(df, missing_only = T)
 
 # Remove any matches with missing values
 df <- na.omit(df)
@@ -80,6 +83,190 @@ df <- na.omit(df)
 # Filter dataset to only contain 2nd serve win % less than or equal to 1
 df <- df|> dplyr::filter(w_2ndWonPct <= 1)
 
+
+# ----------------- Randomly Assigning A and B -----------------------
+# Add column that indicates whether player A or player B won
+
+set.seed(123)
+df$swap <- rbinom(nrow(df), 1, 0.5)
+
+# Create Win loss binary variable (1 indicates that player A won and 0 indicates player B won)
+df$player_A <- ifelse(df$swap == 1, df$winner_name, df$loser_name)
+df$player_B <- ifelse(df$swap == 0, df$winner_name, df$loser_name)
+
+# Creat match_outcome variable
+df$match_result <- ifelse(df$swap == 1, 1, 0)
+
+# Rankings
+df$A_rank <- ifelse(df$swap == 1, df$winner_rank, df$loser_rank)
+df$B_rank <- ifelse(df$swap == 0, df$winner_rank, df$loser_rank)
+
+df$A_rank_points <- ifelse(df$swap == 1, df$winner_rank_points, df$loser_rank_points)
+df$B_rank_points <- ifelse(df$swap == 0, df$winner_rank_points, df$loser_rank_points)
+
+# Handedness
+df$A_hand <- ifelse(df$swap == 1, df$winner_hand, df$loser_hand)
+df$B_hand <- ifelse(df$swap == 0, df$winner_hand, df$loser_hand)
+
+# Aces
+df$A_ace <- ifelse(df$swap == 1, df$w_ace, df$l_ace)
+df$B_ace <- ifelse(df$swap == 0, df$w_ace, df$l_ace)
+
+# Double faults
+df$A_df <- ifelse(df$swap == 1, df$w_df, df$l_df)
+df$B_df <- ifelse(df$swap == 0, df$w_df, df$l_df)
+
+# Total service points
+df$A_svpt <- ifelse(df$swap == 1, df$w_svpt, df$l_svpt)
+df$B_svpt <- ifelse(df$swap == 0, df$w_svpt, df$l_svpt)
+
+# First serve in
+df$A_1stIn <- ifelse(df$swap == 1, df$w_1stIn, df$l_1stIn)
+df$B_1stIn <- ifelse(df$swap == 0, df$w_1stIn, df$l_1stIn)
+
+# First serve points won
+df$A_1stWon <- ifelse(df$swap == 1, df$w_1stWon, df$l_1stWon)
+df$B_1stWon <- ifelse(df$swap == 0, df$w_1stWon, df$l_1stWon)
+
+# Second serve points won
+df$A_2ndWon <- ifelse(df$swap == 1, df$w_2ndWon, df$l_2ndWon)
+df$B_2ndWon <- ifelse(df$swap == 0, df$w_2ndWon, df$l_2ndWon)
+
+# Service games
+df$A_SvGms <- ifelse(df$swap == 1, df$w_SvGms, df$l_SvGms)
+df$B_SvGms <- ifelse(df$swap == 0, df$w_SvGms, df$l_SvGms)
+
+# Break points saved
+df$A_bpSaved <- ifelse(df$swap == 1, df$w_bpSaved, df$l_bpSaved)
+df$B_bpSaved <- ifelse(df$swap == 0, df$w_bpSaved, df$l_bpSaved)
+
+# Break points faced
+df$A_bpFaced <- ifelse(df$swap == 1, df$w_bpFaced, df$l_bpFaced)
+df$B_bpFaced <- ifelse(df$swap == 0, df$w_bpFaced, df$l_bpFaced)
+
+# Break Points generated on return
+df$A_bpCreated <- ifelse(df$swap == 1, df$l_bpFaced, df$w_bpFaced)
+df$B_bpCreated <- ifelse(df$swap == 0, df$l_bpFaced, df$w_bpFaced)
+
+# Break Point Converted on return
+df$A_bpConv <- ifelse(df$swap == 1, df$w_bpConv, df$l_bpConv)
+df$B_bpConv <- ifelse(df$swap == 0, df$w_bpConv, df$l_bpConv)
+
+# First serves made percentage
+df$A_1stInPct <- df$A_1stIn / df$A_svpt
+df$B_1stInPct <- df$B_1stIn / df$B_svpt
+
+#Also going to create a first serve win % variable
+df$A_1stWonPct <- df$A_1stWon / df$A_1stIn
+df$B_1stWonPct <- df$B_1stWon / df$B_1stIn
+
+# 2nd Serve Win percentage
+df$A_2ndWonPct <- df$A_2ndWon / (df$A_svpt - df$A_1stIn)
+df$B_2ndWonPct <- df$B_2ndWon / (df$B_svpt - df$B_1stIn)
+
+# Break point save percentage
+df$A_bpSavedPct <- df$A_bpSaved / df$A_bpFaced
+df$B_bpSavedPct <- df$B_bpSaved / df$B_bpFaced
+df$A_bpSavedPct[is.na(df$A_bpSavedPct)] <- 1
+df$B_bpSavedPct[is.na(df$B_bpSavedPct)] <- 1
+
+# Break Point Conversion precetage
+df$A_bpConvPct <- (1 - df$B_bpSavedPct)
+df$B_bpConvPct <- (1 - df$A_bpSavedPct)
+
+# Return Points Won
+df$A_returnPtsWon <- 
+  ifelse(df$swap == 1, df$w_returnPtsWon, df$l_returnPtsWon)
+
+df$B_returnPtsWon <-
+  ifelse(df$swap == 0, df$w_returnPtsWon, df$l_returnPtsWon)
+
+# Return Points Won percentage
+df$A_returnPtsWonPct <-
+  ifelse(df$swap == 1, df$w_returnPtsWonPct, df$l_returnPtsWonPct)
+df$B_returnPtsWonPct <-
+  ifelse(df$swap == 0, df$w_returnPtsWonPct, df$l_returnPtsWonPct)
+
+
+
+
+# ----------------- Create Difference Variables -----------------
+# ranking difference
+df$rank_diff <- df$A_rank - df$B_rank
+
+# Ranking points difference
+df$rank_points_diff <- df$A_rank_points - df$B_rank_points
+
+# Ace differential
+df$ace_diff <- df$A_ace - df$B_ace
+
+# Double Fault differential
+df$df_diff <- df$A_df - df$B_df
+
+# Service Points differential
+df$svpt_diff <- df$A_svpt - df$B_svpt
+
+# 1st serves in differentail
+df$diff_1stIn <- df$A_1stIn - df$B_1stIn
+
+# 1st serve points won differential
+df$diff_1stWon <- df$A_1stWon - df$B_1stWon
+
+# 2nd serve points won differential
+df$diff_2ndWon <- df$A_2ndWon - df$B_2ndWon
+
+# Service Games Differential
+df$SvGms_diff <- df$A_SvGms - df$B_SvGms
+
+# Break Points Saved Differential
+df$bpSaved_diff <- df$A_bpSaved - df$B_bpSaved
+
+# Break Points faced differential
+df$bpFaced_diff <- df$A_bpFaced - df$B_bpFaced
+
+# Break points created differential
+df$bpCreated_diff <- df$A_bpCreated - df$B_bpCreated
+
+# Break points won differential
+df$bpConv_diff <- df$A_bpConv - df$B_bpConv
+
+# 1st serve percentage difference
+df$diff_1stInPct <- 
+  (df$A_1stInPct - df$B_1stInPct)
+
+# 1st serve points won % difference
+df$diff_1stWonPct <- 
+  (df$A_1stWonPct - df$B_1stWonPct)
+
+# 2nd serve points won % difference
+df$diff_2ndWonPct <-
+  (df$A_2ndWonPct - df$B_2ndWonPct)
+
+# Break Points saved % difference
+df$bpSavedPct_diff <-
+  (df$A_bpSavedPct - df$B_bpSavedPct)
+
+# Break point conversion rate difference
+df$bpConvPct_diff <- 
+  (df$A_bpConvPct - df$B_bpConvPct)
+
+# return points won difference
+df$returnPtsWon_diff <- 
+  (df$A_returnPtsWon - df$B_returnPtsWon)
+
+# Return points won % difference 
+df$returnPtsWonPct_diff <-
+  (df$A_returnPtsWonPct - df$B_returnPtsWonPct)
+
+
+
+# ------------ Standardizing the Diffrence Variables ---------------
+# Creating vector that contains all of the difference variable names
+
+diff_vars <- grep("^diff|_diff$", names(df), value = TRUE)
+
+# Standardizing the diffrence variables
+df[diff_vars] <- scale(df[diff_vars])
 
 
 # ----------- Create Seperate DataFrames for each Surface -----------
@@ -119,144 +306,139 @@ train_hard <- df_hard[train_index_hard, ]
 
 test_hard <- df_hard[-train_index_hard, ]
 
+# ---------------------------------------------------
+# global.R MUST contain:
+#   df, train_clay, train_grass, train_hard
+#   + all preprocessing steps you already wrote
+# ---------------------------------------------------
 
 
 
-# ----------------------
-# Helper: discover stats
-# ----------------------
-# We expect columns like w_1stWonPct, l_1stWonPct, w_ace, l_ace, etc.
-# This app will look for pairs of columns that share the same suffix after removing the "w_" or "l_".
-all_cols <- unique(c(names(train_clay), names(train_grass), names(train_hard)))
+# All difference variables (created in global.R)
+diff_vars <- grep("^diff|_diff$", names(df), value = TRUE)
 
-w_cols <- all_cols[grepl("^w_", all_cols)]
-l_cols <- all_cols[grepl("^l_", all_cols)]
-
-# base stat names where both w_ and l_ exist
-base_names <- intersect(sub("^w_", "", w_cols), sub("^l_", "", l_cols))
-base_names <- sort(base_names)
-
-# Create human-friendly labels: e.g. "1stWonPct" -> "1st Serve Points Won %"
-make_label <- function(x){
-  lab <- x
-  # small heuristics for nicer labels
-  lab <- gsub("Pct$", "%", lab)
-  lab <- gsub("Won", " Won", lab)
-  lab <- gsub("1st", "1st", lab)
-  lab <- gsub("2nd", "2nd", lab)
-  lab <- gsub("SvGms", "Service Games", lab)
-  lab <- gsub("_", " ", lab)
-  lab
-}
-stat_choices <- setNames(base_names, sapply(base_names, make_label))
-
-# Surfaces
+# Allowed surfaces
 surface_choices <- c("Clay", "Grass", "Hard")
 
+# -------------------------------------------------------
+# Descriptive Labels for Independent Variables (diff vars)
+# -------------------------------------------------------
+
+var_labels <- c(
+  "ace_diff"             = "Ace Differential",
+  "df_diff"              = "Double Fault Differential",
+  "svpt_diff"            = "Service Points Differential",
+  "diff_1stIn"           = "1st Serves In Differential",
+  "diff_1stWon"          = "1st Serve Points Won Differential",
+  "diff_2ndWon"          = "2nd Serve Points Won Differential",
+  "SvGms_diff"           = "Service Games Differential",
+  "bpSaved_diff"         = "Break Points Saved Differential",
+  "bpFaced_diff"         = "Break Points Faced Differential",
+  "bpCreated_diff"       = "Break Points Created Differential",
+  "bpConv_diff"          = "Break Points Converted Differential",
+  "diff_1stInPct"        = "1st Serve % Differential",
+  "diff_1stWonPct"       = "1st Serve Points Won % Diff",
+  "diff_2ndWonPct"       = "2nd Serve Points Won % Diff",
+  "bpSavedPct_diff"      = "Break Points Saved % Differential",
+  "bpConvPct_diff"       = "Break Point Conversion % Differential",
+  "returnPtsWon_diff"    = "Return Points Won Differential",
+  "returnPtsWonPct_diff" = "Return Points Won % Differential",
+  "rank_diff"            = "Ranking Differential",
+  "rank_points_diff"     = "Ranking Points Differential"
+)
+
+# Automatically label any missing diff variables:
+missing <- setdiff(diff_vars, names(var_labels))
+var_labels[missing] <- missing  # fallback: use variable name itself
+
+
+
+
 ui <- fluidPage(
-  titlePanel("Compare Winner vs Loser — Any Statistic by Surface"),
+  
+  titlePanel("Logistic Regression Explorer by Surface"),
+  
   sidebarLayout(
     sidebarPanel(
-      selectInput("surface", "Select Surface(s):",
+      
+      # MULTIPLE SURFACES ALLOWED
+      selectInput("surface", "Select Surface:",
                   choices = surface_choices,
                   multiple = TRUE,
-                  selected = surface_choices),
-      selectInput("stat", "Select Statistic (Winner vs Loser):",
-                  choices = stat_choices,
-                  selected = base_names[which(base_names == "1stWonPct") %||% 1]),
-      actionButton("run", "Update", class = "btn-primary"),
-      hr(),
-      helpText("")
+                  selected = c("Clay", "Grass", "Hard")),
+      
+      # DEPENDENT VARIABLE IS FIXED
+      selectInput("dep_var", "Dependent Variable:",
+                  choices = "match_result",
+                  selected = "match_result"),
+      
+      # MULTIPLE INDEPENDENT VARIABLES FROM diff VARS
+      selectInput("indep_vars", "Independent Variables:",
+                  choices = diff_vars,
+                  multiple = TRUE,
+                  selected = c("ace_diff", "df_diff", "diff_1stInPct",
+                               "diff_2ndWonPct", "bpCreated_diff",
+                               "bpConvPct_diff")),
+      
+      actionButton("run", "Run Logistic Regression", class = "btn-primary")
+      
     ),
+    
     mainPanel(
-      plotOutput("barplot", height = "480px"),
-      br(),
-      tableOutput("means_table")
+      h3("Logistic Regression Results"),
+      verbatimTextOutput("model_summary")
     )
   )
 )
 
 server <- function(input, output, session) {
   
-  # reactive dataset builder for selected surfaces
-  get_combined <- reactive({
-    req(input$surface)
-    frames <- list()
-    if ("Clay" %in% input$surface) frames <- c(frames, list(train_clay))
-    if ("Grass" %in% input$surface) frames <- c(frames, list(train_grass))
-    if ("Hard"  %in% input$surface) frames <- c(frames, list(train_hard))
-    combined <- bind_rows(frames, .id = "src")  # src not used further
-    combined
-  })
-  
   observeEvent(input$run, {
     
-    df_all <- get_combined()
-    req(nrow(df_all) > 0)
-    
-    stat_base <- input$stat
-    w_var <- paste0("w_", stat_base)
-    l_var <- paste0("l_", stat_base)
-    
-    # Safely handle missing columns
-    if (!all(c(w_var, l_var) %in% names(df_all))) {
-      showNotification(glue("Selected stat columns not found: {w_var} / {l_var}"), type = "error")
-      return()
+    # Validate surface selection
+    if (length(input$surface) == 0) {
+      output$model_summary <- renderPrint("Please select at least one surface.")
+      return(NULL)
     }
     
-    # Create tidy long dataset with player_type and value
-    plot_df <- df_all %>%
-      dplyr::select(surface, all_of(c(w_var, l_var))) %>%
-      tidyr::pivot_longer(cols = c(all_of(w_var), all_of(l_var)),
-                          names_to = "player_type", values_to = "value") %>%
-      dplyr::mutate(player_type = ifelse(grepl("^w_", player_type), "Winner", "Loser"),
-                    surface = as.factor(surface))
-    
-    # compute means and SE for errorbars and label placement
-    summary_df <- plot_df %>%
-      group_by(surface, player_type) %>%
-      summarise(mean = mean(value, na.rm = TRUE),
-                se = sd(value, na.rm = TRUE) / sqrt(sum(!is.na(value))),
-                n = sum(!is.na(value)),
-                .groups = "drop")
-    
-    # detect if stat looks like a proportion (Pct or values between 0 and 1)
-    looks_pct <- grepl("Pct$|pct|Pct", stat_base) ||
-      (all(plot_df$value >= 0, na.rm = TRUE) && all(plot_df$value <= 1, na.rm = TRUE))
-    
-    # prepare label formatting
-    label_fun <- if (looks_pct) function(x) paste0(round(x * 100, 1), "%") else function(x) format(round(x, 2), nsmall = 2)
-    
-    # Plot
-    p <- ggplot(plot_df, aes(x = surface, y = value, fill = player_type)) +
-      stat_summary(fun = mean, geom = "bar", position = position_dodge(width = 0.8)) +
-      stat_summary(fun.data = mean_se, geom = "errorbar", position = position_dodge(width = 0.8), width = 0.2) +
-      geom_text(data = summary_df,
-                aes(x = surface, y = mean, label = label_fun(mean), group = player_type),
-                position = position_dodge(width = 0.8),
-                vjust = -0.6, size = 4) +
-      labs(title = paste0(make_label(stat_base), " — Winner vs Loser by Surface"),
-           x = "Surface",
-           y = make_label(stat_base),
-           fill = "") +
-      theme_minimal(base_size = 14)
-    
-    if (looks_pct) {
-      p <- p + scale_y_continuous(labels = scales::percent_format(accuracy = 1), limits = c(0, NA))
+    # Validate predictors
+    if (length(input$indep_vars) == 0) {
+      output$model_summary <- renderPrint("Please select at least one independent variable.")
+      return(NULL)
     }
     
-    output$barplot <- renderPlot(p)
+    # Build dynamic formula
+    formula <- as.formula(
+      paste0(input$dep_var, " ~ ", paste(input$indep_vars, collapse = " + "))
+    )
     
-    # output table of means
-    output$means_table <- renderTable({
-      summary_df %>%
-        tidyr::pivot_wider(names_from = player_type, values_from = c(mean, se, n)) %>%
-        # format numbers nicely
-        mutate(across(starts_with("mean"), ~ if (looks_pct) paste0(round(. * 100, 2), "%") else round(., 3)))
-    }, striped = TRUE, hover = TRUE)
+    # Fit logistic models for EACH selected surface
+    model_list <- lapply(input$surface, function(surf_name) {
+      
+      df_surf <- switch(
+        surf_name,
+        "Clay"  = train_clay,
+        "Grass" = train_grass,
+        "Hard"  = train_hard
+      )
+      
+      glm(formula, data = df_surf, family = binomial)
+    })
     
-  }, ignoreNULL = FALSE)
-  
+    # Output side-by-side table using stargazer
+    output$model_summary <- renderPrint({
+      stargazer(
+        model_list,
+        type = "text",
+        column.labels = input$surface,
+        title = "Logistic Regression Output for Specified Surfaces and Variables",
+        dep.var.labels = input$dep_var,
+        covariate.labels = var_labels[input$indep_vars],
+        digits = 2
+      )
+    })
+    
+  })
 }
 
-shinyApp(ui, server)
+shinyApp(ui = ui, server = server)
