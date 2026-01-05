@@ -15,8 +15,11 @@ Math_Stats_Most_Associated_With_Match_Results_On_ATP_Tour.pdf
 results, and conclusions
 
 app.R
-- R Shiny app that allows the user to visually compare the mean values of any specified
-match statistic between match winners and losers between the three surfaces.
+- R Shiny app that allows the user to compare logistic regression results between the
+three surfaces for any combination of predictor variables specified by the user. The
+app produces a table with the coefficient estimates for each selected independent variable.
+Match stats with a coefficient estiamtes of higher magnitude have a stronger effect on
+tennis match outcomes.
 
 
 ## Data
