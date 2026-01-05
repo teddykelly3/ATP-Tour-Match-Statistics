@@ -1,5 +1,8 @@
 # Tennis Match Statistics Association with Match Outcomes
 
+## Author
+Teddy Kelly
+
 ## Overview
 This project analyzes ATP tennis match statistics to identify which factors
 most significantly determine match outcomes. Additionally, this project investigates
@@ -55,5 +58,3 @@ quicker surfaces than clay which is a slow surface.
 
 
 
-## Author
-Teddy Kelly
