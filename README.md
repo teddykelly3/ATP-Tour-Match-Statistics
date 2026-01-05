@@ -31,7 +31,7 @@ mean values between match winners and losers across each surface.
 
 ## Data
 - Source: [*ATP matches*](https://www.kaggle.com/datasets/sijovm/atpdata)
-dataset by Sijo Manikadan on Kaggle (Too big to add to repo)
+dataset by Sijo Manikadan on Kaggle (Too big to add to repository)
 - Time period: 1991–2022
 - Surfaces: Hard, Clay, Grass
 
