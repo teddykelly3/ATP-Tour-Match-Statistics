@@ -40,7 +40,7 @@ mean values between match winners and losers across each surface.
 - Surface-specific modeling
 
 ## Tools
-- R Studio(tidyverse, ggplot2, glm)
+- R Studio(tidyverse, ggplot2, glm, stargazer)
 
 ## Results
 - Generating break points and break point conversion rate are among the strongest
